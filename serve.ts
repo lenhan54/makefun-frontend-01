@@ -4,8 +4,8 @@ import { createServer } from 'node:http';
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { join, extname, normalize } from 'node:path';
 
-const APP = new URL('./app/', import.meta.url).pathname;
-const TYPES = {
+const ROOT = new URL('./app/', import.meta.url).pathname;
+const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.mjs': 'text/javascript; charset=utf-8',
@@ -18,7 +18,7 @@ const TYPES = {
   '.webp': 'image/webp',
 };
 
-function portFromArgs() {
+function pickPort() {
   const at = process.argv.indexOf('--port');
   if (at >= 0 && process.argv[at + 1]) return Number(process.argv[at + 1]);
   return 8080;
@@ -28,13 +28,13 @@ const server = createServer((req, res) => {
   const url = new URL(req.url || '/', 'http://x');
   const path = decodeURIComponent(url.pathname);
   const rel = path === '/' ? 'index.html' : path.replace(/^\/+/, '');
-  const file = join(APP, normalize(rel));
-  if (!file.startsWith(APP) || !existsSync(file) || !statSync(file).isFile()) {
+  const file = join(ROOT, normalize(rel));
+  if (!file.startsWith(ROOT) || !existsSync(file) || !statSync(file).isFile()) {
     res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
-    res.end('not found: ' + path);
+    res.end('no such file: ' + path);
     return;
   }
-  const type = TYPES[extname(file)] || 'application/octet-stream';
+  const type = MIME[extname(file)] || 'application/octet-stream';
   res.writeHead(200, { 'content-type': type, 'cache-control': 'no-store' });
   if (req.method === 'HEAD') {
     res.end();
@@ -43,5 +43,5 @@ const server = createServer((req, res) => {
   res.end(readFileSync(file));
 });
 
-const port = portFromArgs();
+const port = pickPort();
 server.listen(port, () => console.log('serving app/ at http://localhost:' + port));

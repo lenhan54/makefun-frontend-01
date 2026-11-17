@@ -5,33 +5,33 @@ import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } fro
 import { join } from 'node:path';
 import { buildDossier } from './vendor/makefun-frontend.ts';
 
-const outDir = process.env.MAKEFUN_OUTPUT_DIR || '/output';
-const root = new URL('.', import.meta.url).pathname;
+const dest = process.env.MAKEFUN_OUTPUT_DIR || '/output';
+const here = new URL('.', import.meta.url).pathname;
 
-function ship(name) {
-  const from = join(root, name);
-  const to = join(outDir, name);
+function copyDir(name) {
+  const from = join(here, name);
+  const to = join(dest, name);
   if (!existsSync(from)) return;
   rmSync(to, { recursive: true, force: true });
   cpSync(from, to, { recursive: true });
 }
 
-mkdirSync(outDir, { recursive: true });
-for (const name of readdirSync(root)) {
-  if (name === 'app' || name === 'screenshots') ship(name);
+mkdirSync(dest, { recursive: true });
+for (const name of readdirSync(here)) {
+  if (name === 'app' || name === 'screenshots') copyDir(name);
 }
-const dossier = buildDossier(outDir, {
+const dossier = buildDossier(dest, {
   text_max_bytes: 163840,
   screenshots: { max: 3, max_bytes: 262144 },
   app_max_files: 993,
   app_max_bytes: 16777216,
 });
-writeFileSync(join(outDir, 'dossier.json'), dossier);
+writeFileSync(join(dest, 'dossier.json'), dossier);
 if (dossier.length > 1572864) throw new Error('dossier.json over the 1.5 MiB cap: ' + dossier.length + ' bytes');
-// Read the file back so a silent short write is caught here, not at the gate.
-const back = readdirSync(outDir);
-if (!back.includes('dossier.json') || !back.includes('app') || !back.includes('screenshots')) {
+// Read the directory back so a silent short write is caught here, not at the gate.
+const present = readdirSync(dest);
+if (!present.includes('dossier.json') || !present.includes('app') || !present.includes('screenshots')) {
   throw new Error('output is missing dossier.json, app/ or screenshots/');
 }
-const shipped = readdirSync(join(outDir, 'app'));
-console.log('wrote ' + join(outDir, 'dossier.json') + ' (' + dossier.length + ' bytes) from ' + shipped.length + ' app entries');
+const appEntries = readdirSync(join(dest, 'app'));
+console.log('wrote ' + join(dest, 'dossier.json') + ' (' + dossier.length + ' bytes) from ' + appEntries.length + ' app files');
