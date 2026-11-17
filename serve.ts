@@ -1,48 +1,64 @@
-// A tiny static server for app/: index.html at / and every file under app/.
-// Node 22, standard library only. Run: node serve.ts [--port 8080]
+// A tiny static server for app/ (Node 22, standard library only), for
+// local runs and screenshots: `node serve.ts` serves app/ on
+// http://localhost:8080 (`--port <n>` for another port). It sends the
+// MIME types a browser needs and refuses any path outside app/.
+import { createReadStream, statSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { readFileSync, existsSync, statSync } from 'node:fs';
-import { join, extname, normalize } from 'node:path';
+import { extname, join, normalize, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const APP_ROOT = new URL('./app/', import.meta.url).pathname;
-const TYPES = {
+const root = resolve(fileURLToPath(new URL('./app', import.meta.url)));
+const args = process.argv.slice(2);
+const portIndex = args.indexOf('--port');
+const wanted = portIndex === -1 ? 8080 : Number(args[portIndex + 1]);
+const port = Number.isInteger(wanted) && wanted > 0 && wanted < 65536 ? wanted : 8080;
+
+const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.mjs': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
-  '.svg': 'image/svg+xml',
   '.webp': 'image/webp',
+  '.ico': 'image/x-icon',
+  '.woff2': 'font/woff2',
+  '.webmanifest': 'application/manifest+json',
 };
 
-function chosenPort() {
-  const flag = process.argv.indexOf('--port');
-  if (flag >= 0 && process.argv[flag + 1]) return Number(process.argv[flag + 1]);
-  return 8080;
-}
-
-const server = createServer((req, res) => {
-  const url = new URL(req.url || '/', 'http://x');
-  const path = decodeURIComponent(url.pathname);
-  const rel = path === '/' ? 'index.html' : path.replace(/^\/+/, '');
-  const file = join(APP_ROOT, normalize(rel));
-  if (!file.startsWith(APP_ROOT) || !existsSync(file) || !statSync(file).isFile()) {
-    res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
-    res.end('no such file: ' + path);
+createServer((request, response) => {
+  const url = new URL(request.url ?? '/', 'http://localhost');
+  let pathname;
+  try {
+    pathname = decodeURIComponent(url.pathname);
+  } catch {
+    response.writeHead(400).end('bad request');
     return;
   }
-  const type = TYPES[extname(file)] || 'application/octet-stream';
-  // Never cache locally during development: the browser always re-reads.
-  res.writeHead(200, { 'content-type': type, 'cache-control': 'no-store' });
-  if (req.method === 'HEAD') {
-    res.end();
+  if (pathname.endsWith('/')) pathname += 'index.html';
+  const file = resolve(join(root, normalize(pathname)));
+  if (file !== root && !file.startsWith(root + sep)) {
+    response.writeHead(403).end('forbidden');
     return;
   }
-  res.end(readFileSync(file));
+  let size;
+  try {
+    const st = statSync(file);
+    if (!st.isFile()) throw new Error('not a file');
+    size = st.size;
+  } catch {
+    response.writeHead(404).end('not found');
+    return;
+  }
+  response.writeHead(200, {
+    'content-type': MIME[extname(file).toLowerCase()] ?? 'application/octet-stream',
+    'content-length': size,
+    'cache-control': 'no-store',
+  });
+  createReadStream(file).pipe(response);
+}).listen(port, '127.0.0.1', () => {
+  console.log(`app/ is on http://localhost:${port}`);
 });
-
-const port = chosenPort();
-server.listen(port, () => console.log('serving app/ at http://localhost:' + port));

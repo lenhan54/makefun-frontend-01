@@ -1,40 +1,27 @@
-// Hands this entry in: copies app/ and screenshots/ into the output
-// directory, then writes dossier.json there with buildDossier from the
-// vendored make.fun dossier library. Node 22, standard library only.
-import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+// Hand this entry in (Node 22, standard library only): copy app/ and
+// screenshots/ from beside this file to /output and write
+// /output/dossier.json with the vendored make.fun library. The scorer
+// rebuilds the dossier from the same library and compares byte for byte,
+// so vendor/makefun-frontend.ts is left exactly as the kit shipped it.
+// Outside the grader, MAKEFUN_OUTPUT_DIR stands in for /output:
+//   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
+import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { buildDossier } from './vendor/makefun-frontend.ts';
 
-const outDir = process.env.MAKEFUN_OUTPUT_DIR || '/output';
-const rootDir = new URL('.', import.meta.url).pathname;
+const here = fileURLToPath(new URL('.', import.meta.url));
+const out = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
+if (!existsSync(join(here, 'app'))) throw new Error('app/ is missing from the repository');
 
-function copyTree(name) {
-  const src = join(rootDir, name);
-  const dst = join(outDir, name);
-  if (!existsSync(src)) return;
-  rmSync(dst, { recursive: true, force: true });
-  cpSync(src, dst, { recursive: true });
-}
+mkdirSync(out, { recursive: true });
+cpSync(join(here, 'app'), join(out, 'app'), { recursive: true });
+mkdirSync(join(out, 'screenshots'), { recursive: true });
+if (existsSync(join(here, 'screenshots'))) cpSync(join(here, 'screenshots'), join(out, 'screenshots'), { recursive: true });
 
-mkdirSync(outDir, { recursive: true });
-for (const entry of readdirSync(rootDir)) {
-  if (entry === 'app' || entry === 'screenshots') copyTree(entry);
-}
-const dossier = buildDossier(outDir, {
-  text_max_bytes: 163840,
-  screenshots: { max: 3, max_bytes: 262144 },
-  app_max_files: 993,
-  app_max_bytes: 16777216,
-});
-writeFileSync(join(outDir, 'dossier.json'), dossier);
-if (dossier.length > 1572864) {
-  throw new Error('dossier.json over the 1.5 MiB cap: ' + dossier.length + ' bytes');
-}
-// Read the directory back so a silent short write is caught here, not at the gate.
-// A dossier over the cap is refused above; an empty output dir is refused here.
-const made = readdirSync(outDir);
-if (!made.includes('dossier.json') || !made.includes('app') || !made.includes('screenshots')) {
-  throw new Error('output is missing dossier.json, app/ or screenshots/');
-}
-const appCount = readdirSync(join(outDir, 'app')).length;
-console.log('wrote ' + join(outDir, 'dossier.json') + ' (' + dossier.length + ' bytes) from ' + appCount + ' app files');
+// Caps from the gate: at most 3 screenshots, each at most 256 KiB; app/
+// at most 993 files and directories and 16 MiB; the dossier text cap.
+writeFileSync(
+  join(out, 'dossier.json'),
+  buildDossier(out, { text_max_bytes: 163840, screenshots: { max: 3, max_bytes: 262144 }, app_max_files: 993, app_max_bytes: 16777216 }),
+);

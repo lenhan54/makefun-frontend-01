@@ -1,21 +1,13 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>make.fun — live bounties</title>
-<style>html{background:#0a0e13}body{margin:0;font:15px/1.5 system-ui,sans-serif;color:#e6edf3;background:#0a0e13}</style>
-<script type="module">import('./app.js').then(m=>m.boot()).catch(()=>{window.__shotReady=true;document.getElementById('view').innerHTML='<p>The app could not start. <a href="#/">Reload</a></p>'})</script>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<link rel=stylesheet href=style.css>
+<script type=module src=main.js></script>
 </head>
 <body>
-<a class="skip" href="#view">Skip to content</a>
-<header>
-<div class="bar"><a class="brand" href="#/">make.fun</a>
-<nav aria-label="Sections"><a href="#/">Board</a><a href="#/bounty/makefun-frontend-01">This bounty</a><a href="#/leaderboard/makefun-frontend-01">Leaderboard</a></nav>
-<form id="lookup"><label for="handle">Profile</label><input id="handle" type="search" placeholder="@handle"><button>Go</button></form></div>
-<p id="netline" class="traffic">Connecting…</p>
-</header>
-<main id="view" tabindex="-1" aria-live="polite"><noscript><p>JavaScript is needed for live data.</p></noscript><p class="pending">Loading live bounties…</p></main>
-<footer><p id="perfline">First load: index.html only · ETag cache · rows patched in place · virtual leaderboard · V6</p><p>Live, read-only data from the <a href="https://make.fun/api/openapi.json">make.fun API</a>. No sign-in, no writes.</p></footer>
+<header><a href="#/">make.fun</a></header>
+<main id=app></main>
+<footer id=ft></footer>
 </body>
 </html>
