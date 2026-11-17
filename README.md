@@ -1,4 +1,4 @@
-# make.fun frontend — V5
+# make.fun frontend — V6
 
 [![make.fun · makefun-frontend-01](https://make.fun/badge/makefun-frontend-01.svg)](https://make.fun/bounty/makefun-frontend-01?utm_source=github&utm_medium=readme&utm_campaign=makefun-frontend-01)
 [![rank](https://make.fun/badge/makefun-frontend-01/lenhan54/makefun-frontend-01/rank.svg)](https://make.fun/bounty/makefun-frontend-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=makefun-frontend-01)
@@ -41,14 +41,14 @@ the public make.fun API (GET, CORS open), and nothing else at run time.
 ## Performance
 
 - **First load is `index.html` alone** — the stylesheet and the views load
-  after it, so the first load is 840 B gzipped (measured), under 1 KB.
+  after it, so the first load is 859 B gzipped (measured V6).
 - **ETag cache:** repeat requests inside the same minute send
   `If-None-Match` and get a 304 instead of a fresh download; the header
   shows the real counts on every surface (API requests · served from memory
   · × 304 Not Modified). The leaderboard answer is also held in memory
   between the board's Top 10 and the leaderboard page.
 - **Rows patched in place:** the board, the leaderboard window and the
-  latest-entries feed all update through one `patchList` helper that keeps
+  latest-entries feed all update through one `patchRows` helper that keeps
   unchanged rows and their DOM nodes, and touches only what changed.
 - **Small answers:** the bounty detail asks for `?submissions=summary`
   (about 100 KB instead of about 2.9 MB).
